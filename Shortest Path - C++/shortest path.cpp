@@ -5,29 +5,16 @@
 using namespace std;
 #define INF 0x3f3f3f3f
 
-//Descripcion del problema
-/*
-Un rascacielos no tiene mas de 100 pisos (del 0 al 99). Tiene entre 1 y 5 ascensores.
-Los ascensores pueden viajar a distintas velocidades y no todos van a los mismos pisos.
-Estamos en el piso 0 y queremos ir hasta el piso k de la forma mas rapida. Ir al primer
-ascensor no cuesta nada, pero despues cambiar de ascensor cuesta 60 segundos. No podemos
-usar la escalera.
-Input: 
-n (numero de ascensores), k (piso objetivo)
-T1 ... Tn (velocidad de cada ascensor)
-n lineas con los pisos en los que para cada ascensor
-*/
-
-struct arista {
+struct edge {
     int v;
-    int peso;
+    int weight;
 };
 
-typedef vector<vector<arista>> grafo;
-typedef int nodo;
+typedef vector<vector<edge>> graph_t;
+typedef int vertex;
 typedef int dist;
 
-vector<int> str_to_vec(string str){
+vector<int> string_to_vector(string str){
     int it = 0;
     int i = 0;
     vector<int> res;
@@ -45,123 +32,105 @@ vector<int> str_to_vec(string str){
     return res;
 }
 
-vector<dist> dijkstra(grafo& g, int source){
-    //Implementamos Dijkstra con un set:
-    
-    //set<pair<dist, nodo>> , de esta manera ordena por distancia
-    //El set arranca vacio
-    set<pair<dist, nodo>> q;
+vector<dist> dijkstra(graph_t& graph, int source){
+    set<pair<dist, vertex>> q;
         
-    vector<nodo> distancias(g.size(), INF);
-    distancias[source] = 0;
+    vector<vertex> distances(graph.size(), INF);
+    distances[source] = 0;
 
-    //Insertamos <0, src> en el set
     q.insert(make_pair(0, source));
 
-    //Mientras que el set no este vacio
     while(!q.empty()){
-        //Sacamos el mas chico (set.begin)
-        pair<dist, nodo> primero = *(q.begin());
+        pair<dist, vertex> primero = *(q.begin());
         q.erase(primero);
 
-        nodo vecino;
-        dist peso;
+        vertex adyacent;
+        dist w;
         
-        //Iteramos sobre la adyacencia del vertice
-        for(int i=0; i<g[primero.second].size(); i++){
-            vecino = g[primero.second][i].v;
-            peso = g[primero.second][i].peso;
+        for(int i=0; i<graph[primero.second].size(); i++){
+            adyacent = graph[primero.second][i].v;
+            w = graph[primero.second][i].weight;
 
-            if(distancias[vecino] > distancias[primero.second] + peso){
-                //Si la distancia del vecino era distinta a INF => Esta en q 
-                if(distancias[vecino] != INF){
-                    q.erase(q.find(make_pair(distancias[vecino], vecino)));
+            if(distances[adyacent] > distances[primero.second] + w){
+                if(distances[adyacent] != INF){
+                    q.erase(q.find(make_pair(distances[adyacent], adyacent)));
                 }
-                //Actualizamos la distancia del vecino y lo ponemos en q
-                distancias[vecino] = distancias[primero.second] + peso;
-                q.insert(make_pair(distancias[vecino], vecino));
+                //Updates distance of adyacent vertex to source in the queue
+                distances[adyacent] = distances[primero.second] + w;
+                q.insert(make_pair(distances[adyacent], adyacent));
             }
         }
     }
 
-    return distancias;
+    return distances;
     
 }
 
-void ej10(int cant_ascensores){
-    //piso objetivo
-    int k;
-    cin >> k; 
+void ej10(int number_of_lifts){
+    int objective;
+    cin >> objective; 
 
-    //velocidades de ascensores
-    vector<int> vel(cant_ascensores);
-    for(int i=0; i<cant_ascensores; i++){
-        cin >> vel[i];
+    vector<int> speed(number_of_lifts);
+    for(int i=0; i<number_of_lifts; i++){
+        cin >> speed[i];
         
     }
 
-    //inicializamos el grafo
-    vector<arista> vacio = {};
-    //|V| = cant_ascensores * 100 + 100
-    int v = (cant_ascensores*100)+100;
-    grafo g(v, vacio);
+    //vector<edge> vacio = {};
+    //|V| = number_of_lifts * 100 + 100
+    int v = (number_of_lifts*100)+100;
+    graph_t graph(v);
     
-    //ponemos las aristas
-    arista uv;
+    //Inserts edges in graph
+    edge uv;
     
     cin.ignore();
 
-    for(int j=0; j<cant_ascensores; j++){
-        string pisos;
-        //cargamos los pisos del ascensor j en un string
-        getline(cin, pisos);
-        //pasamos los pisos a un vector de enteros
-        vector<int> pisos_j = str_to_vec(pisos);
+    for(int j=0; j<number_of_lifts; j++){
+        string floors;
+        getline(cin, floors);
+        vector<int> jth_lift_stops = string_to_vector(floors);
 
-        //agregamos los pisos del ascensor al grafo
-        //el ascensor j empieza en el vertice 100*j
+        //The jth lift begins on vertex j*100
 
-        //Toda parada de ascensor conecta con la siguiente
+        //Each lift stop connects with its the next one
         int l;
-        for(l=1; l<pisos_j.size(); l++){
-            uv.v = (100*(j+1)) + pisos_j[l];
-            uv.peso = vel[j] * (pisos_j[l] - pisos_j[l-1]);
-            g[(100*(j+1)) + pisos_j[l-1]].push_back(uv);
+        for(l=1; l<jth_lift_stops.size(); l++){
+            uv.v = (100*(j+1)) + jth_lift_stops[l];
+            uv.weight = speed[j] * (jth_lift_stops[l] - jth_lift_stops[l-1]);
+            graph[(100*(j+1)) + jth_lift_stops[l-1]].push_back(uv);
         }
 
-        //Toda parada de ascensor conecta con su anterior
-        for(l=0; l<pisos_j.size()-1; l++){
-            uv.v = (100*(j+1)) + pisos_j[l];
-            uv.peso = vel[j] * (pisos_j[l+1] - pisos_j[l]);
-            g[(100*(j+1)) + pisos_j[l+1]].push_back(uv);
+        //Each lift stop connects with its previous one
+        for(l=0; l<jth_lift_stops.size()-1; l++){
+            uv.v = (100*(j+1)) + jth_lift_stops[l];
+            uv.weight = speed[j] * (jth_lift_stops[l+1] - jth_lift_stops[l]);
+            graph[(100*(j+1)) + jth_lift_stops[l+1]].push_back(uv);
         }
 
-        //Toda parada de ascensor conecta con el piso del edificio
-        //y todo piso se conecta con los ascensores que paren en ese piso
-        for(l=0; l<pisos_j.size(); l++){
-            uv.v = pisos_j[l];
-            uv.peso = 0;
-            g[(100*(j+1)) + pisos_j[l]].push_back(uv);
+        //Each lift stop connects with the building floor it is on
+        //and each building floor connects with all lifts that stop on that floor
+        for(l=0; l<jth_lift_stops.size(); l++){
+            uv.v = jth_lift_stops[l];
+            uv.weight = 0;
+            graph[(100*(j+1)) + jth_lift_stops[l]].push_back(uv);
             
-            //Si el piso es 0 conecta con peso 0, sino con 60
-            if(pisos_j[l] == 0){
+            if(jth_lift_stops[l] == 0){
                 uv.v = (100*(j+1));
-                g[0].push_back(uv);
+                graph[0].push_back(uv);
             } else{
-                uv.v = (100*(j+1))+pisos_j[l];
-                uv.peso = 60;
-                g[pisos_j[l]].push_back(uv);
+                uv.v = (100*(j+1))+jth_lift_stops[l];
+                uv.weight = 60;
+                graph[jth_lift_stops[l]].push_back(uv);
             }
         }   
         
     }
 
-    //Corremos Dijkstra desde el vertice 0
-    vector<int> dist_min = dijkstra(g, 0);
+    vector<int> dist_min = dijkstra(graph, 0);
 
-    //Devolvemos la distancia minima a k
-    if(dist_min[k] != INF){
-        cout << dist_min[k] << endl;
+    if(dist_min[objective] != INF){
+        cout << dist_min[objective] << endl;
     } else{
         cout << "IMPOSSIBLE" << endl;
     }
@@ -169,9 +138,9 @@ void ej10(int cant_ascensores){
 }
 
 int main(){
-    int n;
-    while(cin >> n){
-        ej10(n);
+    int number_of_lifts;
+    while(cin >> number_of_lifts){
+        ej10(number_of_lifts);
     }
     return 0;
 }
